@@ -12,12 +12,20 @@ testinfo = collections.namedtuple(
 default_testinfo = testinfo(
     exitcode=0, execcode=0, output='', linkargs=[], skip_test_expected=False)
 
-ASM = 'riscv64-unknown-elf-gcc'
 SIMU = 'spike'
 
 LIBPRINT = 'libprint.s'
 if 'LIBPRINT' in os.environ:
     LIBPRINT = os.environ['LIBPRINT']
+
+ASM = 'riscv64-unknown-elf-gcc'
+if 'ASM' in os.environ:
+    ASM = os.environ['ASM']
+
+PK = 'pk'
+if 'PK' in os.environ:
+    PK = os.environ['PK']
+
 
 
 def cat(filename):
@@ -269,7 +277,7 @@ class TestCompiler(object):
                 [SIMU,
                  '-m100',  # Limit memory usage to 100MB, more than enough and
                            # avoids crashing on a VM with <= 2GB RAM for example.
-                 'pk',
+                 PK,
                  exec_name],
                 scope="runtime")
             output = re.sub(r'bbl loader\r?\n', '', result.output)
