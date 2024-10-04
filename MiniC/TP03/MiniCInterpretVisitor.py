@@ -8,6 +8,9 @@ from Lib.Errors import MiniCRuntimeError, MiniCInternalError, MiniCUnsupportedEr
 
 MINIC_VALUE = int | str | bool | float | List['MINIC_VALUE']
 
+# Since python's int are unbounded, this simple lambda consider them like C with overflow
+recenterInt = lambda x: (x % 4294967295)-2147483648
+
 
 class MiniCInterpretVisitor(MiniCVisitor):
 
@@ -22,10 +25,21 @@ class MiniCInterpretVisitor(MiniCVisitor):
     def visitVarDecl(self, ctx) -> None:
         # Initialise all variables in self._memory
         type_str = ctx.typee().getText()
-        raise NotImplementedError(f"Initialization for type {type_str}")
+        varnames = self.visit(ctx.id_l())
+        default = None
+        match type_str:
+            case "INTTYPE": default = 0
+            case "FLOATTYPE": default = 0.0
+            case "BOOLTYPE": default = False
+            case "STRINGTYPE": default = ""
+            case _: raise NotImplementedError(f"Initialization for type {type_str}")
+        for x in varnames: self._memory[x] = default
+        return None
 
     def visitIdList(self, ctx) -> List[str]:
-        raise NotImplementedError()
+        v = self.visit(ctx.id_l())
+        v.append(ctx.ID().getText()) # will actually reverse the list too
+        return v
 
     def visitIdListBase(self, ctx) -> List[str]:
         return [ctx.ID().getText()]
@@ -45,7 +59,10 @@ class MiniCInterpretVisitor(MiniCVisitor):
         return ctx.getText() == "true"
 
     def visitIdAtom(self, ctx) -> MINIC_VALUE:
-        raise NotImplementedError()
+        ret = self._memory.get(ctx.getText(),None)
+        if ret == None:
+            raise MiniCRuntimeError("Undefined variable {}".format(ctx.getText()))
+        return ret
 
     def visitStringAtom(self, ctx) -> str:
         return ctx.getText()[1:-1]  # Remove the ""
@@ -99,10 +116,12 @@ class MiniCInterpretVisitor(MiniCVisitor):
         if ctx.myop.type == MiniCParser.PLUS:
             if any(isinstance(x, str) for x in (lval, rval)):
                 return '{}{}'.format(lval, rval)
+            elif isinstance(lval, int):
+                return recenterInt(lval + rval)
             else:
                 return lval + rval
         elif ctx.myop.type == MiniCParser.MINUS:
-            return lval - rval
+            return recenterInt(lval - rval)
         else:
             raise MiniCInternalError(
                 f"Unknown additive operator '{ctx.myop}'")
@@ -114,11 +133,16 @@ class MiniCInterpretVisitor(MiniCVisitor):
         if ctx.myop.type == MiniCParser.MULT:
             return lval * rval
         elif ctx.myop.type == MiniCParser.DIV:
-            # TODO : interpret division
-            raise NotImplementedError()
+            if rval == 0:
+                raise MiniCRuntimeError("Division by 0")
+            if isinstance(lval, int):
+                return int(lval / rval) # TODO
+            else:
+                return lval / rval
         elif ctx.myop.type == MiniCParser.MOD:
-            # TODO : interpret modulo
-            raise NotImplementedError()
+            if rval == 0:
+                raise MiniCRuntimeError("Division by 0")
+            return (abs(lval) % abs(rval)) if lval >0 else -(abs(lval) % abs(rval)) 
         else:
             raise MiniCInternalError(
                 f"Unknown multiplicative operator '{ctx.myop}'")
@@ -127,7 +151,7 @@ class MiniCInterpretVisitor(MiniCVisitor):
         return not self.visit(ctx.expr())
 
     def visitUnaryMinusExpr(self, ctx) -> MINIC_VALUE:
-        return -self.visit(ctx.expr())
+        return recenterInt(-self.visit(ctx.expr())) # because -2147483648 = 2147483648 in C
 
     # visit statements
 

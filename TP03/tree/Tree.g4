@@ -1,7 +1,7 @@
 grammar Tree;
 
 
-int_tree_top : int_tree EOF #top
+int_tree_top : int_tree EOF #topper
     ;
 
 int_tree:  INT    #leaf
