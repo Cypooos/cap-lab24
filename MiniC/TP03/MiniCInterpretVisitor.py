@@ -9,7 +9,7 @@ from Lib.Errors import MiniCRuntimeError, MiniCInternalError, MiniCUnsupportedEr
 MINIC_VALUE = int | str | bool | float | List['MINIC_VALUE']
 
 # Since python's int are unbounded, this simple lambda consider them like C with overflow
-recenterInt = lambda x: (x % 4294967295)-2147483648
+recenterInt = lambda x: ((x+2147483648) % 4294967296 )-2147483648
 
 
 class MiniCInterpretVisitor(MiniCVisitor):
@@ -24,15 +24,15 @@ class MiniCInterpretVisitor(MiniCVisitor):
 
     def visitVarDecl(self, ctx) -> None:
         # Initialise all variables in self._memory
-        type_str = ctx.typee().getText()
+        type_ele = ctx.typee().mytype.type
         varnames = self.visit(ctx.id_l())
         default = None
-        match type_str:
-            case "INTTYPE": default = 0
-            case "FLOATTYPE": default = 0.0
-            case "BOOLTYPE": default = False
-            case "STRINGTYPE": default = ""
-            case _: raise NotImplementedError(f"Initialization for type {type_str}")
+        match type_ele:
+            case MiniCParser.INTTYPE: default = 0
+            case MiniCParser.FLOATTYPE: default = 0.0
+            case MiniCParser.BOOLTYPE: default = False
+            case MiniCParser.STRINGTYPE: default = ""
+            case _: raise NotImplementedError(f"Initialization for type {type_ele}")
         for x in varnames: self._memory[x] = default
         return None
 
@@ -50,7 +50,7 @@ class MiniCInterpretVisitor(MiniCVisitor):
         return self.visit(ctx.expr())
 
     def visitIntAtom(self, ctx) -> int:
-        return int(ctx.getText())
+        return recenterInt(int(ctx.getText()))
 
     def visitFloatAtom(self, ctx) -> float:
         return float(ctx.getText())
@@ -121,7 +121,10 @@ class MiniCInterpretVisitor(MiniCVisitor):
             else:
                 return lval + rval
         elif ctx.myop.type == MiniCParser.MINUS:
-            return recenterInt(lval - rval)
+            if isinstance(lval, int):
+                return recenterInt(lval - rval)
+            else:
+                return lval - rval
         else:
             raise MiniCInternalError(
                 f"Unknown additive operator '{ctx.myop}'")
@@ -174,13 +177,25 @@ class MiniCInterpretVisitor(MiniCVisitor):
         print(val)
 
     def visitAssignStat(self, ctx) -> None:
-        raise NotImplementedError()
+        val = self.visit(ctx.expr())
+        var_name = ctx.ID().getText()
+        if not var_name in self._memory:
+            raise MiniCRuntimeError("Undefined variable {}".format(var_name))
+        self._memory[var_name] = val
+        return val # assignement are expressions that returns the value
 
     def visitIfStat(self, ctx) -> None:
-        raise NotImplementedError()
+        cond = self.visit(ctx.expr())
+        if cond == True:
+            self.visit(ctx.then_block)
+            return
+        elif ctx.else_block != None:
+            self.visit(ctx.else_block)
 
     def visitWhileStat(self, ctx) -> None:
-        raise NotImplementedError()
+        while self.visit(ctx.expr()):
+            self.visit(ctx.body())
+        return
 
     # TOPLEVEL
     def visitProgRule(self, ctx) -> None:
