@@ -131,17 +131,22 @@ class MiniCInterpretVisitor(MiniCVisitor):
 
     def visitMultiplicativeExpr(self, ctx) -> MINIC_VALUE:
         assert ctx.myop is not None
-        lval = self.visit(ctx.expr(0))
-        rval = self.visit(ctx.expr(1))
+        lval = recenterInt(self.visit(ctx.expr(0)))
+        rval = recenterInt(self.visit(ctx.expr(1)))
         if ctx.myop.type == MiniCParser.MULT:
-            return lval * rval
-        elif ctx.myop.type == MiniCParser.DIV:
-            if rval == 0:
-                raise MiniCRuntimeError("Division by 0")
-            if isinstance(lval, int):
-                return int(lval / rval) # TODO
+            if isinstance(rval, int):
+                return recenterInt(lval * rval)
             else:
-                return lval / rval
+                return lval * rval
+        elif ctx.myop.type == MiniCParser.DIV:
+            if isinstance(rval, int):
+                if rval == 0:
+                    raise MiniCRuntimeError("Division by 0")
+                return int(lval/rval)
+            if isinstance(rval,float):
+                if rval == 0.0:
+                    raise MiniCRuntimeError("Division by 0")
+            return lval/rval
         elif ctx.myop.type == MiniCParser.MOD:
             if rval == 0:
                 raise MiniCRuntimeError("Division by 0")
@@ -194,9 +199,14 @@ class MiniCInterpretVisitor(MiniCVisitor):
 
     def visitWhileStat(self, ctx) -> None:
         while self.visit(ctx.expr()):
-            self.visit(ctx.body())
+            self.visit(ctx.body)
         return
-
+    
+    def visitForStat(self, ctx) -> None:
+        if ctx.init != None: self.visit(ctx.init)
+        while self.visit(ctx.cond) if ctx.cond != None else True:
+            self.visit(ctx.body)
+            if ctx.looper != None: self.visit(ctx.looper)
     # TOPLEVEL
     def visitProgRule(self, ctx) -> None:
         self.visitChildren(ctx)
