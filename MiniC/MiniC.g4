@@ -22,6 +22,7 @@ block: stat*   #statList;
 
 stat: assignment SCOL
     | if_stat
+    | for_stat
     | while_stat
     | print_stat  
     ;
@@ -30,6 +31,11 @@ assignment: ID ASSIGN expr #assignStat;
 
 if_stat: IF OPAR expr CPAR then_block=stat_block
         (ELSE else_block=stat_block)? #ifStat;
+
+real_expr: assignment | expr ;
+
+for_stat: FOR OPAR (init=real_expr)? SCOL (cond=real_expr)? SCOL
+    (looper=real_expr)? CPAR body=stat_block #forStat ;
 
 stat_block: OBRACE block CBRACE
           | stat
@@ -98,6 +104,7 @@ FALSE : 'false';
 IF : 'if';
 ELSE : 'else';
 WHILE : 'while';
+FOR : 'for';
 RETURN : 'return';
 PRINTLN_INT : 'println_int';
 PRINTLN_BOOL : 'println_bool';
