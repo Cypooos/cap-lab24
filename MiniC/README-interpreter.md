@@ -1,14 +1,13 @@
 # MiniC interpreter and typer
 LAB3, MIF08 / CAP / CS444 2022-23
 
-
 # Authors
 
-TODO: YOUR NAME HERE
+BOUROTTE Coda
 
 # Contents
 
-TODO for STUDENTS : Say a bit about the code infrastructure ...
+Nothing changed. 
 
 # Howto
 
@@ -21,12 +20,18 @@ You can select the files you want to test by using `make test TEST_FILES='TP03/*
 
 # Test design 
 
-TODO: explain your tests. Do not repeat what test files already contain, just give the main objectives of the tests.
+The folders in `tests/students` are organised as such :
+- `arith/` contain test on arithmetic operations,
+- `bools/` on booleans,
+- `typing/` all sort of typing errors,
+- `control/` for all control structure like `if`, `for` or `while`
 
 # Design choices
 
-TODO: explain your choices - explain the limitations of your implementation.
+I implemented C-style for loops. Just like in C, you can have an argument of a C-loop empty (`for (;;) {}`).
+A for can have an asignement `for(i=45;;)` or an expression (since in C, assignement are expression). I implemented that.
+I decided to implement overflow of integers, that's why most test are concentrated on integers.
 
 # Known bugs
 
-TODO: document any known bug and limitations. Did you do everything asked for? Did you implement an extension?
+I implemented the `for` extension.
