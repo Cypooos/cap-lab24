@@ -8,6 +8,7 @@ from Lib.Errors import MiniCRuntimeError, MiniCInternalError, MiniCUnsupportedEr
 
 MINIC_VALUE = int | str | bool | float | List['MINIC_VALUE']
 
+# I decided to consider int as 4 bytes, and implement overflow !
 # Since python's int are unbounded, this simple lambda consider them like C with overflow
 recenterInt = lambda x: ((x+2147483648) % 4294967296 )-2147483648
 
@@ -58,14 +59,15 @@ class MiniCInterpretVisitor(MiniCVisitor):
     def visitBooleanAtom(self, ctx) -> bool:
         return ctx.getText() == "true"
 
+    def visitStringAtom(self, ctx) -> str:
+        return ctx.getText()[1:-1]  # Remove the ""
+
     def visitIdAtom(self, ctx) -> MINIC_VALUE:
         ret = self._memory.get(ctx.getText(),None)
         if ret == None:
             raise MiniCRuntimeError("Undefined variable {}".format(ctx.getText()))
         return ret
 
-    def visitStringAtom(self, ctx) -> str:
-        return ctx.getText()[1:-1]  # Remove the ""
 
     # visit expressions
 
@@ -75,12 +77,12 @@ class MiniCInterpretVisitor(MiniCVisitor):
     def visitOrExpr(self, ctx) -> bool:
         lval = self.visit(ctx.expr(0))
         rval = self.visit(ctx.expr(1))
-        return lval | rval
+        return lval or rval
 
     def visitAndExpr(self, ctx) -> bool:
         lval = self.visit(ctx.expr(0))
         rval = self.visit(ctx.expr(1))
-        return lval & rval
+        return lval and rval
 
     def visitEqualityExpr(self, ctx) -> bool:
         assert ctx.myop is not None
@@ -135,7 +137,7 @@ class MiniCInterpretVisitor(MiniCVisitor):
         rval = recenterInt(self.visit(ctx.expr(1)))
         if ctx.myop.type == MiniCParser.MULT:
             if isinstance(rval, int):
-                return recenterInt(lval * rval)
+                return recenterInt(lval * rval) # we consider them with overflow like in C
             else:
                 return lval * rval
         elif ctx.myop.type == MiniCParser.DIV:
@@ -187,7 +189,7 @@ class MiniCInterpretVisitor(MiniCVisitor):
         if not var_name in self._memory:
             raise MiniCRuntimeError("Undefined variable {}".format(var_name))
         self._memory[var_name] = val
-        return val # assignement are expressions that returns the value
+        return val # assignement are expressions that returns the value in C
 
     def visitIfStat(self, ctx) -> None:
         cond = self.visit(ctx.expr())
@@ -203,10 +205,11 @@ class MiniCInterpretVisitor(MiniCVisitor):
         return
     
     def visitForStat(self, ctx) -> None:
-        if ctx.init != None: self.visit(ctx.init)
+        if ctx.init != None: self.visit(ctx.init) # the first, middle and last can be empoty in C, so we check that they arn't None before executing them
         while self.visit(ctx.cond) if ctx.cond != None else True:
             self.visit(ctx.body)
             if ctx.looper != None: self.visit(ctx.looper)
+    
     # TOPLEVEL
     def visitProgRule(self, ctx) -> None:
         self.visitChildren(ctx)
