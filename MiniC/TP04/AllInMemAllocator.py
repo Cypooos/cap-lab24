@@ -14,11 +14,23 @@ class AllInMemAllocator(Allocator):
         before: List[Instruction] = []
         after: List[Instruction] = []
         new_args: List[Operand] = []
-        # TODO: compute before,after,args.
-        # TODO: iterate over old_args, check which argument
-        # TODO: is a temporary (e.g. isinstance(..., Temporary)),
-        # TODO: and if so, generate ld/sd accordingly. Replace the
-        # TODO: temporary with S[1], S[2] or S[3] physical registers.
+        first = -1
+        for i,arg in enumerate(old_instr.args()):
+            if isinstance(arg, Temporary):
+                if first == -1: first = i
+                pos = arg.get_alloced_loc()
+                before.append(RiscV.ld(S[numreg],pos))
+                new_args.append(S[numreg])
+                numreg+=1
+            else:
+                new_args.append(arg)
+        if not old_instr.is_read_only() and first != -1:
+            arg = old_instr.args()[first]
+            if isinstance(arg, Temporary):
+                after.append(RiscV.sd(S[1],arg.get_alloced_loc()))
+            else:
+                print("IN INS =",old_instr,"\n ARG NB =",first,"IS",arg,"NOT TEMPORARY")
+        
         new_instr = old_instr.with_args(new_args)
         return before + [new_instr] + after
 

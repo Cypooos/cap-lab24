@@ -20,8 +20,9 @@ def find_leaders(instructions: List[CodeStatement]) -> List[int]:
     last is len(instructions)
     """
     leaders: List[int] = [0]
-    # TODO fill leaders
-    # The final "ret" is also a form of jump
+    for i,instruction in enumerate(instructions):
+        if isinstance(instruction,Label): leaders.append(i)
+        if isinstance(instruction,ConditionalJump): leaders.append(i+1)
     leaders.append(len(instructions))
     return leaders
 
@@ -60,13 +61,24 @@ def prepare_chunk(pre_chunk: List[CodeStatement], fdata: FunctionData) -> tuple[
     Raise an error if there is a label not in first position in pre_chunk,
     or a jump not in last position.
     """
-    label = None
-    jump = None
+    label:Label
+    jump:ConditionalJump | AbsoluteJump | None = None
     inner_statements: List[CodeStatement] = pre_chunk
     # Extract the first instruction from inner_statements if it is a label, or create a fresh one
-    raise NotImplementedError() # TODO
+    if isinstance(pre_chunk[0],Label):
+        label_ins = pre_chunk.pop(0)
+        assert isinstance(label_ins,Label)
+        label = label_ins
+    else:
+        label = fdata.fresh_label("leader_label")
+
     # Extract the last instruction from inner_statements if it is a jump, or do nothing
-    raise NotImplementedError() # TODO
+    
+    if pre_chunk != [] and isinstance(pre_chunk[-1],(ConditionalJump,AbsoluteJump)):
+        jump_ins = pre_chunk.pop(-1)
+        assert isinstance(jump_ins,(ConditionalJump,AbsoluteJump))
+        jump = jump_ins
+
     # Check that there is no other label or jump left in inner_statements
     l: List[BlockInstr] = []
     for i in inner_statements:

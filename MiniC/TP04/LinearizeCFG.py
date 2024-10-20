@@ -32,9 +32,11 @@ def linearize(cfg: CFG) -> List[Statement]:
         match block.get_terminator():
             case BranchingTerminator() as j:
                 l.append(ConditionalJump(j.cond, j.op1, j.op2, j.label_then))
-                l.append(AbsoluteJump(j.label_else))
+                if i+1 == len(blocks) or j.label_else != blocks[i+1].get_label():
+                    l.append(AbsoluteJump(j.label_else))
             case AbsoluteJump() as j:
-                l.append(AbsoluteJump(j.label))
+                if i+1 == len(blocks) or j.label != blocks[i+1].get_label():
+                    l.append(AbsoluteJump(j.label))
             case Return():
                 l.append(AbsoluteJump(cfg.get_end()))
     return l

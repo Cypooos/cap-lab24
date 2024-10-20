@@ -75,7 +75,10 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
 
     def visitBooleanAtom(self, ctx) -> Operands.Temporary:
         # true is 1 false is 0
-        raise NotImplementedError()  # TODO
+        val = Operands.Immediate(int(ctx.getText() == "true"))
+        dest_temp = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(dest_temp, val))
+        return dest_temp
 
     def visitIdAtom(self, ctx) -> Operands.Temporary:
         try:
@@ -99,13 +102,27 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
         assert ctx.myop is not None
         tmpl: Operands.Temporary = self.visit(ctx.expr(0))
         tmpr: Operands.Temporary = self.visit(ctx.expr(1))
-        raise NotImplementedError()  # TODO
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+        match ctx.myop.type:
+            case MiniCParser.PLUS:
+                self._current_function.add_instruction(RiscV.add(dest_temp, tmpl, tmpr))
+            case MiniCParser.MINUS:
+                self._current_function.add_instruction(RiscV.sub(dest_temp, tmpl, tmpr))
+        return dest_temp
 
     def visitOrExpr(self, ctx) -> Operands.Temporary:
-        raise NotImplementedError()  # TODO
+        tmpl: Operands.Temporary = self.visit(ctx.expr(0))
+        tmpr: Operands.Temporary = self.visit(ctx.expr(1))
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.lor(dest_temp, tmpl, tmpr))
+        return dest_temp
 
     def visitAndExpr(self, ctx) -> Operands.Temporary:
-        raise NotImplementedError()  # TODO
+        tmpl: Operands.Temporary = self.visit(ctx.expr(0))
+        tmpr: Operands.Temporary = self.visit(ctx.expr(1))
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.land(dest_temp, tmpl, tmpr))
+        return dest_temp
 
     def visitEqualityExpr(self, ctx) -> Operands.Temporary:
         return self.visitRelationalExpr(ctx)
@@ -117,18 +134,75 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
             print("relational expression:")
             print(Trees.toStringTree(ctx, [], self._parser))
             print("Condition:", c)
-        raise NotImplementedError()  # TODO
+        tmpl: Operands.Temporary = self.visit(ctx.expr(0))
+        tmpr: Operands.Temporary = self.visit(ctx.expr(1))
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+
+        # result to be set
+        true = Operands.Immediate(1)
+        false = Operands.Immediate(0)
+
+        self._current_function.add_instruction(RiscV.li(dest_temp,true))
+        if_true_label = self._current_function.fdata.fresh_label("rel_false")
+        self._current_function.add_instruction(RiscV.conditional_jump(if_true_label,tmpl,Condition(ctx.myop.type),tmpr))
+        self._current_function.add_instruction(RiscV.li(dest_temp,false))
+        self._current_function.add_label(if_true_label)
+        return dest_temp
 
     def visitMultiplicativeExpr(self, ctx) -> Operands.Temporary:
         assert ctx.myop is not None
+        tmpl: Operands.Temporary = self.visit(ctx.expr(0))
+        tmpr: Operands.Temporary = self.visit(ctx.expr(1))
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+
+        # Define a "0" temporary variable to test the division by 0
+        val_zero = Operands.Immediate(0)
+        tmp_zero = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
+
+        # As explain in the RISC manual (https://five-embeddev.com/riscv-user-isa-manual/Priv-v1.12/m.html),
+        # a division by zero CANNOT fail
+        # Still, to be consistent with the semantic asked, we do as proposed in the manual :
+        # "only a single branch instruction needs to be added to each divide operation,
+        # and this branch instruction can be inserted after the divide and should
+        # normally be very predictably not taken, adding little runtime overhead." -- quote
+        #    >>>  so we then test the division AFTER it occured
         div_by_zero_lbl = self._current_function.fdata.get_label_div_by_zero()
-        raise NotImplementedError()  # TODO
+        match ctx.myop.type:
+            case MiniCParser.MULT:
+                self._current_function.add_instruction(RiscV.mul(dest_temp, tmpl, tmpr))
+            case MiniCParser.DIV:
+                self._current_function.add_instruction(RiscV.div(dest_temp, tmpl, tmpr))
+                self._current_function.add_instruction(RiscV.conditional_jump(div_by_zero_lbl,tmpr,Condition(MiniCParser.EQ),tmp_zero))
+            case MiniCParser.MOD:
+                self._current_function.add_instruction(RiscV.rem(dest_temp, tmpl, tmpr))
+                self._current_function.add_instruction(RiscV.conditional_jump(div_by_zero_lbl,tmpr,Condition(MiniCParser.EQ),tmp_zero))
+        return dest_temp
 
     def visitNotExpr(self, ctx) -> Operands.Temporary:
-        raise NotImplementedError()  # TODO
+        tmp: Operands.Temporary = self.visit(ctx.expr())
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+
+        # Define a "1" temporary variable to perform 1 - x
+        val_one = Operands.Immediate(1)
+        tmp_one = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_one, val_one))
+
+        self._current_function.add_instruction(RiscV.sub(dest_temp, tmp_one, tmp))
+        return dest_temp
+
 
     def visitUnaryMinusExpr(self, ctx) -> Operands.Temporary:
-        raise NotImplementedError("unaryminusexpr")  # TODO
+        tmp: Operands.Temporary = self.visit(ctx.expr())
+        dest_temp: Operands.Temporary = self._current_function.fdata.fresh_tmp()
+
+        # Define a "0" temporary variable to perform 0 - x
+        val_zero = Operands.Immediate(0)
+        tmp_zero = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
+
+        self._current_function.add_instruction(RiscV.sub(dest_temp, tmp_zero, tmp))
+        return dest_temp
 
     def visitProgRule(self, ctx) -> None:
         self.visitChildren(ctx)
@@ -159,10 +233,28 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
 
     def visitIfStat(self, ctx) -> None:
         if self._debug:
-            print("if statement")
+            print("if statement") # wtf is the use of that ?
+
         end_if_label = self._current_function.fdata.fresh_label("end_if")
-        raise NotImplementedError()  # TODO
-        self._current_function.add_label(end_if_label)
+        cond = self.visit(ctx.expr())
+
+        # Define a "0" temporary variable to perform test for false
+        val_zero = Operands.Immediate(0)
+        tmp_zero = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
+        
+        if ctx.else_block != None:
+            else_if_label = self._current_function.fdata.fresh_label("else_if")
+            self._current_function.add_instruction(RiscV.conditional_jump(else_if_label,cond,Condition(MiniCParser.EQ),tmp_zero))
+            self.visit(ctx.then_block)
+            self._current_function.add_instruction(RiscV.jump(end_if_label))
+            self._current_function.add_label(else_if_label)
+            self.visit(ctx.else_block)
+            self._current_function.add_label(end_if_label)
+        else:
+            self._current_function.add_instruction(RiscV.conditional_jump(end_if_label,cond,Condition(MiniCParser.EQ),tmp_zero))
+            self.visit(ctx.then_block)
+            self._current_function.add_label(end_if_label)
 
     def visitWhileStat(self, ctx) -> None:
         if self._debug:
@@ -170,7 +262,21 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
             print(Trees.toStringTree(ctx.expr(), [], self._parser))
             print("and block is:")
             print(Trees.toStringTree(ctx.stat_block(), [], self._parser))
-        raise NotImplementedError()  # TODO
+
+        # Define a "0" temporary variable to perform test for false
+        val_zero = Operands.Immediate(0)
+        tmp_zero = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
+
+        loop_label = self._current_function.fdata.fresh_label("loop_label")
+        end_loop_label = self._current_function.fdata.fresh_label("end_loop_label")
+
+        self._current_function.add_label(loop_label)
+        cond = self.visit(ctx.expr())
+        self._current_function.add_instruction(RiscV.conditional_jump(end_loop_label,cond,Condition(MiniCParser.EQ),tmp_zero))
+        self.visit(ctx.stat_block())
+        self._current_function.add_instruction(RiscV.jump(loop_label))
+        self._current_function.add_label(end_loop_label)
     # visit statements
 
     def visitPrintlnintStat(self, ctx) -> None:
