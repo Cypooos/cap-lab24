@@ -268,8 +268,8 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
         tmp_zero = self._current_function.fdata.fresh_tmp()
         self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
 
-        loop_label = self._current_function.fdata.fresh_label("loop_label")
-        end_loop_label = self._current_function.fdata.fresh_label("end_loop_label")
+        loop_label = self._current_function.fdata.fresh_label("while_loop_label")
+        end_loop_label = self._current_function.fdata.fresh_label("end_while_loop_label")
 
         self._current_function.add_label(loop_label)
         cond = self.visit(ctx.expr())
@@ -277,6 +277,36 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
         self.visit(ctx.stat_block())
         self._current_function.add_instruction(RiscV.jump(loop_label))
         self._current_function.add_label(end_loop_label)
+
+    # for statement
+    def visitForStat(self, ctx) -> None:
+
+        # Define a "0" temporary variable to perform test for false
+        val_zero = Operands.Immediate(0)
+        tmp_zero = self._current_function.fdata.fresh_tmp()
+        self._current_function.add_instruction(RiscV.li(tmp_zero, val_zero))
+
+        loop_label = self._current_function.fdata.fresh_label("for_loop_label")
+        end_loop_label = self._current_function.fdata.fresh_label("end_for_loop_label")
+        
+        # the first, middle and last can be empty in C, so we check that they arn't None before executing them
+        
+        # loop initialisation
+        if ctx.init != None: self.visit(ctx.init) 
+        self._current_function.add_label(loop_label)
+        if ctx.cond != None:
+            cond = self.visit(ctx.cond)
+            self._current_function.add_instruction(RiscV.conditional_jump(end_loop_label,cond,Condition(MiniCParser.EQ),tmp_zero))
+        
+        # body and last instruction
+        self.visit(ctx.body)
+        if ctx.looper != None: self.visit(ctx.looper)
+
+        # jump back / end
+        self._current_function.add_instruction(RiscV.jump(loop_label))
+        self._current_function.add_label(end_loop_label)
+
+
     # visit statements
 
     def visitPrintlnintStat(self, ctx) -> None:
