@@ -3,7 +3,7 @@ LAB4 (simple code generation), MIF08 / CAP 2022-23
 
 # Authors
 
-YOUR NAME HERE
+Bourotte Coda
 
 # Contents
 
@@ -11,15 +11,15 @@ TODO for STUDENTS : Say a bit about the code infrastructure ...
 
 # Test design 
 
-TODO: explain your tests
+
 
 # Design choices
 
-TODO: explain your choices. How did you implement boolean not? Did you implement an extension?
+I implemented the `for` loop extension
 
 # Known bugs
 
-TODO: Bugs and limitations.
+No known bugs.
 
 # Checklists
 
@@ -28,30 +28,30 @@ and *tested* with appropriate test cases.
 
 ## Code generation
 
-- [ ] Number Atom
-- [ ] Boolean Atom
-- [ ] Id Atom
-- [ ] Additive expression
-- [ ] Multiplicative expression
-- [ ] UnaryMinus expression
-- [ ] Or expression
-- [ ] And expression
-- [ ] Equality expression
-- [ ] Relational expression (! many cases -> many tests)
-- [ ] Not expression
+- [X] Number Atom
+- [X] Boolean Atom
+- [X] Id Atom
+- [X] Additive expression
+- [X] Multiplicative expression
+- [X] UnaryMinus expression
+- [X] Or expression
+- [X] And expression
+- [X] Equality expression
+- [X] Relational expression (! many cases -> many tests)
+- [X] Not expression
 
 ## Statements
 
-- [ ] Prog, assignements
-- [ ] While
-- [ ] Cond Block
-- [ ] If
-- [ ] Nested ifs
+- [X] Prog, assignements
+- [X] While
+- [X] Cond Block
+- [X] If
+- [X] Nested ifs
 - [ ] Nested whiles
 
 ## Allocation
 
-- [ ] Naive allocation
-- [ ] All in memory allocation
-- [ ] Massive tests of memory allocation
+- [X] Naive allocation
+- [X] All in memory allocation
+- [X] Massive tests of memory allocation
 
