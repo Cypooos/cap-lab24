@@ -7,15 +7,26 @@ Bourotte Coda
 
 # Contents
 
-TODO for STUDENTS : Say a bit about the code infrastructure ...
+The code infrastructure didn't changed.
 
 # Test design 
 
+Most tests are made with the naive-implementation in mind, so that they doesn't get skipped upon testing.
+That's why the `modulo`, `division`, `mult` and `chained` tests are splitted in differents tests.
 
+Otherwise, tests are split in differents folders:
+- `alloc` for the tests that only works with the `all-in-mem` allocator (and `alloc/hundred_vars.c` doesnis too big for the `all-in-mem`)
+- `arith` for the test on arithmetic operations (add, sub, minus, mult, div, mod)
+- `bools` for the tests on booleans (or, and, not) and chained comparaisons
+- `comp` for the tests on comparaison operators (`<`, `<=`, `>`, `>=`, `==`, `==`) on both bool and int
+- `control` for the tests on control operations (if-then-else, while, for)
+- `defaults` for the test on default values of types (for `bool` it's `false` and for `int` it's `0`)
+
+I tested the CFG of a division by zero with `test/dataflow/bad_div0.c`.
 
 # Design choices
 
-I implemented the `for` loop extension
+I implemented the `for` loop extension, see the corresponding tests in the `control` test folder
 
 # Known bugs
 
@@ -23,8 +34,7 @@ No known bugs.
 
 # Checklists
 
-A check ([X]) means that the feature is implemented 
-and *tested* with appropriate test cases.
+A check ([X]) means that the feature is implemented and *tested* with appropriate test cases.
 
 ## Code generation
 
@@ -47,7 +57,7 @@ and *tested* with appropriate test cases.
 - [X] Cond Block
 - [X] If
 - [X] Nested ifs
-- [ ] Nested whiles
+- [X] Nested whiles
 
 ## Allocation
 
