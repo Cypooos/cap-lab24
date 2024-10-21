@@ -143,7 +143,7 @@ class MiniCCodeGen3AVisitor(MiniCVisitor):
         false = Operands.Immediate(0)
 
         self._current_function.add_instruction(RiscV.li(dest_temp,true))
-        if_true_label = self._current_function.fdata.fresh_label("rel_false")
+        if_true_label = self._current_function.fdata.fresh_label("rel_end")
         self._current_function.add_instruction(RiscV.conditional_jump(if_true_label,tmpl,Condition(ctx.myop.type),tmpr))
         self._current_function.add_instruction(RiscV.li(dest_temp,false))
         self._current_function.add_label(if_true_label)
