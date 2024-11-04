@@ -66,7 +66,7 @@ _Academic first semester 2024-2025_
 
 # Week 6:
 
-- :hammer: Lab 4b: Thursday 14/10/2024, 13h30-15h30. Room E001 (Samuel Humeau & Emma Nardino)
+- :hammer: Lab 4b: Monday 14/10/2024, 13h30-15h30. Room E001 (Samuel Humeau & Emma Nardino)
 
   * Control Flow Graph [TP04b](TP04/tp4b.pdf).
   * Code in [MiniC/TP04/](MiniC/TP04/).
@@ -75,3 +75,22 @@ _Academic first semester 2024-2025_
 - :book: Course: Thursday 17/10/2024, 10h15-12h15. Amphi L (Gabriel Radanne)
 
   * Register allocation [slides in english](course/cap_cours07_regalloc.pdf).
+
+# Week 7:
+
+- :hammer: Lab 5a: Monday 21/10/2024, 13h30-15h30. Room E001 (Samuel Humeau & Emma Nardino)
+
+  * Control Flow Graph under SSA Form [TP05a](TP05/tp5a.pdf).
+  * Code in [MiniC/TP05/](MiniC/TP05/).
+  * Documentation (updated) [here](docs/html/index.html).
+
+- :book: Course: Thursday 25/10/2024, 10h15-12h15. Amphi B (Gabriel Radanne)
+
+  * SSA Optims [slides in english](course/cap_cours06b_ssa_optim.pdf).
+
+# Week 8:
+
+- :hammer: Lab 5b (1/2): Monday 04/11/2023, 13h30-15h30. Room E001 (Samuel Humeau & Emma Nardino)
+
+    * Smart Register Allocation [TP05b](TP05/tp5b.pdf).
+    * Code in [MiniC/TP04/](MiniC/TP05/).

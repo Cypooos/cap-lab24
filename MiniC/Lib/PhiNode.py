@@ -17,8 +17,9 @@ class PhiNode(Statement):
     """
     A φ node is a renaming in the CFG, of the form temp_x = φ(temp_0, ..., temp_n).
     The field var contains the variable temp_x.
-    The field srcs relies for each precedent block in the CFG, identified with its label,
-    the variable temp_i of the φ node.
+    The field srcs links each corresponding predecessor in the CFG
+    ---identified by its label---, to the variable temp_i of the φ
+    node.
     """
     var: DataLocation
     srcs: Dict[Label, Operand]

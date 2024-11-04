@@ -2,7 +2,7 @@ MYNAME = Coda Bourotte
 PACKAGE = MiniC
 # Example: stop at the first failed test:
 #   make PYTEST_OPTS=-x test
-PYTEST_OPTS = 
+PYTEST_OPTS =
 # Run the whole test infrastructure for a subset of test files e.g.
 #   make FILTER='TP03/**/bad*.c' test
 ifdef FILTER
