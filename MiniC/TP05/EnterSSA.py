@@ -25,8 +25,12 @@ def insertPhis(cfg: CFG, DF: Dict[Block, Set[Block]]) -> None:
             d = queue.pop(0)
             for b in DF[d]:
                 if b not in has_phi:
-                    # TODO add a phi node in block `b` (Lab 5a, Exercise 4)
-                    raise NotImplementedError("insertPhis")
+                    blcks = b.get_in()
+
+                    labels_dict = {blck.get_label():var for blck in blcks if blck in defs}
+                    b.add_phi(PhiNode(var,labels_dict))
+                    has_phi.add(b)
+                    queue.append(b)
 
 
 def rename_block(cfg: CFG, DT: Dict[Block, Set[Block]], renamer: Renamer, b: Block) -> None:
@@ -43,8 +47,8 @@ def rename_block(cfg: CFG, DT: Dict[Block, Set[Block]], renamer: Renamer, b: Blo
         for i in succ.get_phis():
             assert (isinstance(i, PhiNode))
             i.rename_from(renamer, b.get_label())
-    # TODO recursive call(s) of rename_block (Lab 5a, Exercise 5)
-
+    for succ in DT[b]: 
+        rename_block(cfg,DT,renamer,succ)
 
 def rename_variables(cfg: CFG, DT: Dict[Block, Set[Block]]) -> None:
     """
@@ -54,7 +58,8 @@ def rename_variables(cfg: CFG, DT: Dict[Block, Set[Block]]) -> None:
     This is an helper function called during SSA entry.
     """
     renamer = Renamer(cfg.fdata._pool)
-    # TODO initial call(s) to rename_block (Lab 5a, Exercise 5)
+    for x in cfg.get_entries():
+        rename_block(cfg,DT,renamer,x)
 
 
 def enter_ssa(cfg: CFG, dom_graphs=False, basename="prog") -> None:
@@ -66,5 +71,8 @@ def enter_ssa(cfg: CFG, dom_graphs=False, basename="prog") -> None:
     `dom_graphs` indicates if we have to print the domination graphs.
     `basename` is used for the names of the produced graphs.
     """
-    # TODO implement this function (Lab 5a, Exercise 2)
-    raise NotImplementedError("enter_ssa")
+    dominators = computeDom(cfg)
+    dom_tree = computeDT(cfg,dominators,dom_graphs,basename)
+    dom_front = computeDF(cfg,dominators,dom_tree,dom_graphs,basename)
+    insertPhis(cfg,dom_front)
+    rename_variables(cfg,dom_tree)
