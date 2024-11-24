@@ -27,11 +27,7 @@ def generate_moves_from_phis(phis: List[PhiNode], parent: Block, me:Block) -> Li
         dictio = phi.get_srcs()
         variable = dictio.get(parent.get_label(),None)
         if variable == None: continue
-        if phi_final_var is Temporary:
-            print("BIG UHUH ---------------------------------------------------------")
-            exit()
-        else:
-            to_add = RiscV.mv(phi_final_var, variable)
+        to_add = RiscV.mv(phi_final_var, variable)
         moves.append(to_add)
     return moves
 
@@ -45,23 +41,32 @@ def exit_ssa(cfg: CFG, is_smart: bool) -> None:
     for b in cfg.get_blocks():
         phis = cast(List[PhiNode], b.get_phis())  # Use cast for Pyright
         b.remove_all_phis()  # Remove all phi nodes in the block
-        parents: List[Block] = b.get_in()
+        parents: List[Block] = b.get_in().copy()
         
-        to_add_trans: List[(Block, Block)] = []
         for parent in parents:
             
-            cfg.remove_edge(parent,b)
-            print("DOING",parent.get_label()," --> ",b.get_label())
-            continue
+            # print("DOING",parent.get_label()," --> ",b.get_label())
+
             moves = generate_moves_from_phis(phis, parent, b)
 
+            # make the new block
             b_label = b.get_label()
-            terminator = AbsoluteJump(b_label)
-
-            new_label = Label("phi_"+parent.get_label().name+"_"+b.get_label().name+"_r"+str(randint(10000,99999)))
-            new_block = Block(new_label,moves,terminator)
+            new_terminator = AbsoluteJump(b_label)
+            new_label = Label("phi_"+parent.get_label().name+"__to__"+b.get_label().name+"_r"+str(randint(10000,99999)))
+            new_block = Block(new_label,moves,new_terminator)
             cfg.add_block(new_block)
 
-            to_add_trans.append((parent,new_block))
-            to_add_trans.append((new_block,b))
-        for (x,y) in to_add_trans: cfg.add_edge(x,y)
+            # change the parent's terminator
+            termi = parent.get_terminator()
+            if isinstance(termi, AbsoluteJump):
+                if termi.label == b_label: termi.label = new_label 
+            elif isinstance(termi, BranchingTerminator):
+                if termi.label_else == b_label: termi.label_else = new_label 
+                if termi.label_then == b_label: termi.label_then = new_label 
+            elif isinstance(termi, Return):
+                pass
+            
+            # change the edges
+            cfg.remove_edge(parent,b)
+            cfg.add_edge(parent,new_block)
+            cfg.add_edge(new_block,b)

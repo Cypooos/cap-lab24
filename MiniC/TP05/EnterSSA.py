@@ -21,13 +21,14 @@ def insertPhis(cfg: CFG, DF: Dict[Block, Set[Block]]) -> None:
     for var, defs in cfg.gather_defs().items():
         has_phi: Set[Block] = set()
         queue: List[Block] = list(defs)
+        defs_copy = list(defs).copy()
         while queue:
             d = queue.pop(0)
             for b in DF[d]:
                 if b not in has_phi:
                     blcks = b.get_in()
 
-                    labels_dict = {blck.get_label():var for blck in blcks if blck in defs}
+                    labels_dict = {blck.get_label():var for blck in blcks}
                     b.add_phi(PhiNode(var,labels_dict))
                     has_phi.add(b)
                     queue.append(b)
