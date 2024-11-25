@@ -35,17 +35,37 @@ class LivenessSSA:
 
     def livein_at_instruction(self, block: Block, pos: int, var: Temporary) -> None:
         """Backward propagation of liveness information at the beginning of an instruction."""
-        raise NotImplementedError("LivenessSSA") # TODO (Lab 5b, Exercise 1)
+        instr = block.get_all_statements()[pos]
+        if isinstance(instr,PhiNode) and var in instr.used():
+            phi = instr
+            for label,v in phi.srcs.items():
+                if v == var:
+                    self._seen[block].add(var)
+                    b = self._cfg.get_block(label)
+                    self.liveout_at_block(b,var) 
+                    return
+        elif pos <= 0:
+            self._seen[block].add(var)
+            for block_in in block.get_in():
+                self.liveout_at_block(block_in,var)
+            return
+        else:
+            self.liveout_at_instruction(block, pos-1, var)
 
     def liveout_at_instruction(self, block: Block, pos: int, var: Temporary) -> None:
         """Backward propagation of liveness information at the end of an instruction."""
         instr = block.get_all_statements()[pos]
-        raise NotImplementedError("LivenessSSA") # TODO (Lab 5b, Exercise 1)
+        self._liveout[block,instr].add(var)
+        if not var in instr.defined():
+            self.livein_at_instruction(block,pos,var)
 
     def liveout_at_block(self, block: Block, var: Temporary) -> None:
         """Backward propagation of liveness information at the end of a block."""
-        raise NotImplementedError("LivenessSSA") # TODO (Lab 5b, Exercise 1)
-
+        if not var in self._seen[block]:
+            pos = len(block.get_all_statements())-1
+            self.liveout_at_instruction(block,pos,var)
+            
+    
     def gather_uses(self) -> Dict[Temporary, Set[Tuple[Block, int]]]:
         """
         Return a dictionnary giving for each variable the set of statements using it,
@@ -67,7 +87,12 @@ class LivenessSSA:
 
     def conflict_on_phis(self) -> None:
         """Ensures that variables defined by φ instructions are in conflict with one-another."""
-        raise NotImplementedError("LivenessSSA") # TODO (Lab 5b, Exercise 1)
+        
+        for block in self._cfg.get_blocks():
+            for i,instr in enumerate(block.get_all_statements()):
+                if isinstance(instr,PhiNode):
+                    if isinstance(instr.var,Temporary):
+                        self.liveout_at_instruction(block,i,instr.var)
 
     def print_map_in_out(self) -> None:  # pragma: no cover
         """Print live out sets at each instruction, group by block, useful for debugging!"""

@@ -28,10 +28,32 @@ class SmartAllocator(Allocator):
         before: List[Instruction] = []
         after: List[Instruction] = []
         new_args: List[Operand] = []
-        # TODO (lab5): Compute before, after, subst. This is similar to what
-        # TODO (lab5): replace from the Naive and AllInMem Allocators do (Lab 4).
-        raise NotImplementedError("Smart Replace (lab5)") # TODO
-        # And now return the new list!
+
+        first = -1
+        numreg = 1
+
+        for i,arg in enumerate(old_instr.args()):
+            if isinstance(arg, Temporary):
+                pos = arg.get_alloced_loc()
+                if isinstance(pos, Offset):
+                    if first == -1: first = i
+                    before.append(RiscV.ld(S[numreg],pos))
+                    new_args.append(S[numreg])
+                    numreg+=1
+                else:
+                    new_args.append(pos)
+            else:
+                    new_args.append(arg)
+        if not old_instr.is_read_only() and first != -1:
+            arg = old_instr.args()[first]
+            if isinstance(arg, Temporary):
+                pos = arg.get_alloced_loc()
+                if isinstance(pos, Offset):
+                    after.append(RiscV.sd(S[1],pos))
+            else:
+                print("IN INS =",old_instr,"\n ARG NB =",first,"IS",arg,"NOT TEMPORARY")
+        
+
         instr = old_instr.with_args(new_args)
         return before + [instr] + after
 
@@ -67,10 +89,16 @@ class SmartAllocator(Allocator):
         # but it does not matter as they interfere with no one.
         for v in self._fdata._pool.get_all_temps():
             self._igraph.add_vertex(v)
+        for (block,instr),liveout in self._liveness._liveout.items():
+            for v1 in liveout:
+                for v2 in liveout:
+                    if v1 != v2: self._igraph.add_edge((v1, v2))
+                for v2 in instr.defined():
+                    if v1 != v2: self._igraph.add_edge((v1, v2))
+
         # Iterate over self._liveness._liveout (dictionary containing all
         # live out temporaries for each instruction), and for each conflict use
-        # self._igraph.add_edge((t1, t2)) to add the corresponding edge.
-        raise NotImplementedError("build_interference_graph (lab5)") # TODO
+        #  to add the corresponding edge.
 
     def smart_alloc(self) -> None:
         """
@@ -92,7 +120,14 @@ class SmartAllocator(Allocator):
         alloc_dict: Dict[Temporary, DataLocation] = dict()
         # Use the coloring `coloringreg` to fill `alloc_dict`.
         # Our version is less than 5 lines of code.
-        raise NotImplementedError("Allocation based on graph coloring (lab5)") # TODO
+        nb_regs = len(GP_REGS)
+        for temp,color in coloringreg.items():
+            if color < nb_regs-3:
+                alloc_dict[temp] = GP_REGS[color]
+            else:
+                alloc_dict[temp] = self._fdata.fresh_offset()
+        
+        
         if self._debug:
             print("Allocation:")
             print(alloc_dict)
